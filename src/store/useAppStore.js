@@ -56,7 +56,14 @@ const useAppStore = create((set, get) => ({
       .eq('pin', pin)
       .maybeSingle()
 
-    if (error || !data) return { success: false }
+    if (error) {
+      const msg = error.message || ''
+      if (msg.includes('Invalid API key') || msg.includes('relation') || error.code === 'PGRST301') {
+        return { success: false, dbError: true, message: 'DB接続エラー: Supabase設定を確認してください' }
+      }
+      return { success: false }
+    }
+    if (!data) return { success: false }
 
     set({ currentUser: data })
     await get().loadUserData(data.id)

@@ -46,7 +46,7 @@ export default function Login() {
     const result = await loginWithPin(pin)
     if (!result.success) {
       setErrDots(true)
-      setErrMsg('PINが違います')
+      setErrMsg(result.message || 'PINが違います')
       setShake(true)
       setTimeout(() => {
         setShake(false)
@@ -56,7 +56,7 @@ export default function Login() {
         setErrMsg('')
         setPreview('')
         setChecking(false)
-      }, 600)
+      }, result.dbError ? 2000 : 600)
     }
   }
 
