@@ -2,7 +2,7 @@ import { useEffect } from 'react'
 import useAppStore from '../../store/useAppStore'
 import { toHM, fhLabel, fhS, p2 } from '../../utils/helpers'
 
-function exportCSV(allStaff, todayAttendance, allLeaveRequests, allLeaveBalances) {
+function exportCSV(allStaff, todayAttendance, allLeaveRequests) {
   const now = new Date()
   const dateStr = `${now.getFullYear()}年${now.getMonth() + 1}月${now.getDate()}日`
   let csv = '﻿'
@@ -10,17 +10,19 @@ function exportCSV(allStaff, todayAttendance, allLeaveRequests, allLeaveBalances
   csv += '■ スタッフ別 有給残高\r\n'
   csv += '氏名,役職,今年度付与(h),繰越(h),使用済み(h),残高(h)\r\n'
   allStaff.forEach(s => {
-    const bal = allLeaveBalances[s.id] || { granted_hours: 0, carry_over_hours: 0, used_hours: 0 }
-    const rem = bal.granted_hours + bal.carry_over_hours - bal.used_hours
-    csv += `${s.name},${s.role},${bal.granted_hours},${bal.carry_over_hours},${bal.used_hours},${rem}\r\n`
+    const granted = s.leave_year || 0
+    const carry   = s.leave_carry || 0
+    const used    = s.leave_used || 0
+    const rem     = granted + carry - used
+    csv += `${s.name},${s.role},${granted},${carry},${used},${rem}\r\n`
   })
   csv += '\r\n■ 有給報告履歴\r\n'
   csv += '氏名,役職,日付,時間帯,取得時間(h),備考,状態\r\n'
   allLeaveRequests.forEach(r => {
     const staffName = r.staff?.name || ''
     const staffRole = r.staff?.role || ''
-    const status = r.status === 'approved' ? '確認済み' : r.status === 'rejected' ? '差戻し' : '確認待ち'
-    csv += `${staffName},${staffRole},${r.date},${r.start_time?.slice(0,5)}〜${r.end_time?.slice(0,5)},${r.hours},${r.note||''},${status}\r\n`
+    const status = r.confirmed === true ? '確認済み' : r.confirmed === null ? '差戻し' : '確認待ち'
+    csv += `${staffName},${staffRole},${r.date},${r.time_from?.slice(0,5)}〜${r.time_to?.slice(0,5)},${r.hours},${r.note||''},${status}\r\n`
   })
   csv += '\r\n■ 本日の勤怠状況\r\n'
   csv += '氏名,役職,出勤,退勤,状況\r\n'
@@ -39,7 +41,7 @@ function exportCSV(allStaff, todayAttendance, allLeaveRequests, allLeaveBalances
   a.click()
 }
 
-function exportPDF(allStaff, todayAttendance, allLeaveRequests, allLeaveBalances) {
+function exportPDF(allStaff, todayAttendance, allLeaveRequests) {
   const now = new Date()
   const dateStr = `${now.getFullYear()}年${now.getMonth() + 1}月${now.getDate()}日`
   const w = window.open('', '_blank', 'width=900,height=700')
@@ -63,17 +65,19 @@ function exportPDF(allStaff, todayAttendance, allLeaveRequests, allLeaveBalances
   <table><tr><th>氏名</th><th>役職</th><th>今年度付与</th><th>繰越</th><th>使用済み</th><th>残高</th></tr>`
 
   allStaff.forEach(s => {
-    const bal = allLeaveBalances[s.id] || { granted_hours: 0, carry_over_hours: 0, used_hours: 0 }
-    const rem = bal.granted_hours + bal.carry_over_hours - bal.used_hours
-    html += `<tr><td><b>${s.name}</b></td><td>${s.role}</td><td>${bal.granted_hours}h</td><td style="color:#b39dfa">${bal.carry_over_hours}h</td><td style="color:#d4a017">${bal.used_hours}h</td><td><b style="color:#1ab889">${rem}h</b></td></tr>`
+    const granted = s.leave_year || 0
+    const carry   = s.leave_carry || 0
+    const used    = s.leave_used || 0
+    const rem     = granted + carry - used
+    html += `<tr><td><b>${s.name}</b></td><td>${s.role}</td><td>${granted}h</td><td style="color:#b39dfa">${carry}h</td><td style="color:#d4a017">${used}h</td><td><b style="color:#1ab889">${rem}h</b></td></tr>`
   })
 
   html += `</table><h2>有給報告履歴</h2>
   <table><tr><th>氏名</th><th>日付</th><th>時間帯</th><th>時間</th><th>備考</th><th>状態</th></tr>`
   allLeaveRequests.forEach(r => {
-    const cls = r.status === 'approved' ? 'ok' : r.status === 'rejected' ? 'ng' : 'wait'
-    const label = r.status === 'approved' ? '確認済み' : r.status === 'rejected' ? '差戻し' : '確認待ち'
-    html += `<tr><td>${r.staff?.name || ''}</td><td>${r.date}</td><td>${r.start_time?.slice(0,5)}〜${r.end_time?.slice(0,5)}</td><td>${r.hours}h</td><td>${r.note||'-'}</td><td class="${cls}">${label}</td></tr>`
+    const cls   = r.confirmed === true ? 'ok' : r.confirmed === null ? 'ng' : 'wait'
+    const label = r.confirmed === true ? '確認済み' : r.confirmed === null ? '差戻し' : '確認待ち'
+    html += `<tr><td>${r.staff?.name || ''}</td><td>${r.date}</td><td>${r.time_from?.slice(0,5)}〜${r.time_to?.slice(0,5)}</td><td>${r.hours}h</td><td>${r.note||'-'}</td><td class="${cls}">${label}</td></tr>`
   })
 
   html += `</table><h2>本日の勤怠状況</h2>
@@ -97,14 +101,13 @@ export default function Dashboard() {
   const allStaff = useAppStore(s => s.allStaff)
   const todayAttendance = useAppStore(s => s.todayAttendance)
   const allLeaveRequests = useAppStore(s => s.allLeaveRequests)
-  const allLeaveBalances = useAppStore(s => s.allLeaveBalances)
   const loadAdminData = useAppStore(s => s.loadAdminData)
 
   useEffect(() => { loadAdminData() }, [])
 
   const workingCount = todayAttendance.filter(a => a.clock_in && !a.clock_out).length
   const doneCount = todayAttendance.filter(a => a.clock_out).length
-  const pendingCount = allLeaveRequests.filter(r => r.status === 'pending').length
+  const pendingCount = allLeaveRequests.filter(r => r.confirmed === false).length
 
   return (
     <div className="sc">
@@ -125,7 +128,7 @@ export default function Dashboard() {
 
       <div className="slbl">エクスポート</div>
       <div className="export-row">
-        <button className="btn-exp excel" onClick={() => exportCSV(allStaff, todayAttendance, allLeaveRequests, allLeaveBalances)}>
+        <button className="btn-exp excel" onClick={() => exportCSV(allStaff, todayAttendance, allLeaveRequests)}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
             <polyline points="14 2 14 8 20 8"/>
@@ -133,7 +136,7 @@ export default function Dashboard() {
           </svg>
           Excel出力
         </button>
-        <button className="btn-exp pdf" onClick={() => exportPDF(allStaff, todayAttendance, allLeaveRequests, allLeaveBalances)}>
+        <button className="btn-exp pdf" onClick={() => exportPDF(allStaff, todayAttendance, allLeaveRequests)}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
             <polyline points="14 2 14 8 20 8"/>
@@ -146,8 +149,7 @@ export default function Dashboard() {
       <div className="slbl">本日のスタッフ</div>
       {allStaff.map(s => {
         const att = todayAttendance.find(a => a.staff_id === s.id)
-        const bal = allLeaveBalances[s.id] || { granted_hours: 0, carry_over_hours: 0, used_hours: 0 }
-        const rem = bal.granted_hours + bal.carry_over_hours - bal.used_hours
+        const rem = (s.leave_year || 0) + (s.leave_carry || 0) - (s.leave_used || 0)
 
         let badge, times
         if (att?.status === 'on_break') {
@@ -166,7 +168,7 @@ export default function Dashboard() {
 
         return (
           <div key={s.id} className="sc-card">
-            <div className="sav" style={{ background: `linear-gradient(135deg,${s.gradient_from},${s.gradient_to})` }}>
+            <div className="sav" style={{ background: `linear-gradient(135deg,${s.color_from},${s.color_to})` }}>
               {s.short_name}
             </div>
             <div className="si">

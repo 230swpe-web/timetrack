@@ -11,8 +11,8 @@ export default function LeaveManagement() {
 
   useEffect(() => { loadAdminData() }, [])
 
-  const pending = allLeaveRequests.filter(r => r.status === 'pending')
-  const confirmed = allLeaveRequests.filter(r => r.status !== 'pending')
+  const pending = allLeaveRequests.filter(r => r.confirmed === false)
+  const confirmed = allLeaveRequests.filter(r => r.confirmed !== false)
 
   const handleApprove = async (id) => {
     await approveLeave(id)
@@ -26,7 +26,7 @@ export default function LeaveManagement() {
 
   const detailStr = (r) => {
     const d = formatJpDate(r.date)
-    const range = `${r.start_time?.slice(0,5)}〜${r.end_time?.slice(0,5)}`
+    const range = `${r.time_from?.slice(0,5)}〜${r.time_to?.slice(0,5)}`
     return `${d} ${range}（${fhLabel(r.hours)}）${r.note ? ` · ${r.note}` : ''}`
   }
 
@@ -38,7 +38,7 @@ export default function LeaveManagement() {
           ? <div className="empty">確認待ちの報告はありません</div>
           : pending.map(r => (
             <div key={r.id} className="pi">
-              <div className="pav" style={{ background: `linear-gradient(135deg,${r.staff?.gradient_from||'#7c8ef7'},${r.staff?.gradient_to||'#b39dfa'})` }}>
+              <div className="pav" style={{ background: `linear-gradient(135deg,${r.staff?.color_from||'#7c8ef7'},${r.staff?.color_to||'#b39dfa'})` }}>
                 {r.staff?.short_name || '?'}
               </div>
               <div className="pinfo">
@@ -60,14 +60,14 @@ export default function LeaveManagement() {
           ? <div className="empty">履歴はありません</div>
           : confirmed.map(r => (
             <div key={r.id} className="pi">
-              <div className="pav" style={{ background: `linear-gradient(135deg,${r.staff?.gradient_from||'#7c8ef7'},${r.staff?.gradient_to||'#b39dfa'})` }}>
+              <div className="pav" style={{ background: `linear-gradient(135deg,${r.staff?.color_from||'#7c8ef7'},${r.staff?.color_to||'#b39dfa'})` }}>
                 {r.staff?.short_name || '?'}
               </div>
               <div className="pinfo">
                 <div className="pnm">{r.staff?.name || '---'}</div>
                 <div className="pdt">{detailStr(r)}</div>
               </div>
-              {r.status === 'approved'
+              {r.confirmed === true
                 ? <span className="badge bg">確認済み</span>
                 : <span className="badge br">差戻し</span>
               }

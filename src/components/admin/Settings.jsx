@@ -2,28 +2,27 @@ import { useState, useEffect } from 'react'
 import useAppStore from '../../store/useAppStore'
 
 const DEFAULT_STAFF = [
-  { name: '田中 花子', short_name: '田', role: 'リーダー', pin: '1234', gradient_from: '#7c8ef7', gradient_to: '#b39dfa', granted_hours: 40 },
-  { name: '鈴木 一郎', short_name: '鈴', role: 'スタッフ',  pin: '2345', gradient_from: '#2dd4a0', gradient_to: '#7c8ef7', granted_hours: 40 },
-  { name: '佐藤 美咲', short_name: '佐', role: 'パート',    pin: '3456', gradient_from: '#f7c85a', gradient_to: '#f47a8a', granted_hours: 32 },
-  { name: '山田 太郎', short_name: '山', role: 'スタッフ',  pin: '4567', gradient_from: '#f47a8a', gradient_to: '#f7c85a', granted_hours: 40 },
+  { name: '田中 花子', short_name: '田', role: 'リーダー', pin: '1234', color_from: '#7c8ef7', color_to: '#b39dfa', granted_hours: 40 },
+  { name: '鈴木 一郎', short_name: '鈴', role: 'スタッフ',  pin: '2345', color_from: '#2dd4a0', color_to: '#7c8ef7', granted_hours: 40 },
+  { name: '佐藤 美咲', short_name: '佐', role: 'パート',    pin: '3456', color_from: '#f7c85a', color_to: '#f47a8a', granted_hours: 32 },
+  { name: '山田 太郎', short_name: '山', role: 'スタッフ',  pin: '4567', color_from: '#f47a8a', color_to: '#f7c85a', granted_hours: 40 },
 ]
 
-function makeEdits(staff, balances) {
+function makeEdits(staff) {
   return staff.map(s => ({
     id: s.id || null,
     name: s.name,
     short_name: s.short_name,
     role: s.role,
     pin: s.pin,
-    gradient_from: s.gradient_from,
-    gradient_to: s.gradient_to,
-    granted_hours: balances[s.id]?.granted_hours ?? s.granted_hours ?? 40,
+    color_from: s.color_from,
+    color_to: s.color_to,
+    granted_hours: s.leave_year ?? s.granted_hours ?? 40,
   }))
 }
 
 export default function Settings() {
   const allStaff = useAppStore(s => s.allStaff)
-  const allLeaveBalances = useAppStore(s => s.allLeaveBalances)
   const settings = useAppStore(s => s.settings)
   const saveGlobalSettings = useAppStore(s => s.saveGlobalSettings)
   const saveStaffSettings = useAppStore(s => s.saveStaffSettings)
@@ -33,7 +32,7 @@ export default function Settings() {
   const [unit, setUnit] = useState(0.5)
   const [workH, setWorkH] = useState(8)
   const [carryMax, setCarryMax] = useState(40)
-  const [staffEdits, setStaffEdits] = useState(makeEdits(DEFAULT_STAFF, {}))
+  const [staffEdits, setStaffEdits] = useState(makeEdits(DEFAULT_STAFF))
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
 
@@ -50,7 +49,7 @@ export default function Settings() {
 
   useEffect(() => {
     if (allStaff.length > 0) {
-      setStaffEdits(makeEdits(allStaff, allLeaveBalances))
+      setStaffEdits(makeEdits(allStaff))
     }
     // allStaff が空でも loading 完了後は DEFAULT_STAFF のまま表示を維持
   }, [allStaff, allLeaveBalances])
@@ -120,7 +119,7 @@ export default function Settings() {
             <div className="staff-edit-header">
               <div style={{
                 width: 32, height: 32, borderRadius: '50%',
-                background: `linear-gradient(135deg,${s.gradient_from},${s.gradient_to})`,
+                background: `linear-gradient(135deg,${s.color_from},${s.color_to})`,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 fontSize: 12, fontWeight: 700, flexShrink: 0, color: '#fff',
               }}>
@@ -162,7 +161,7 @@ export default function Settings() {
         ) : staffEdits.map((s, idx) => (
           <div key={idx} className="set-row">
             <div className="pav" style={{
-              background: `linear-gradient(135deg,${s.gradient_from},${s.gradient_to})`,
+              background: `linear-gradient(135deg,${s.color_from},${s.color_to})`,
               width: 34, height: 34, fontSize: 12,
             }}>
               {s.short_name}

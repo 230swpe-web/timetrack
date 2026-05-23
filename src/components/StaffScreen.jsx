@@ -8,7 +8,7 @@ export default function StaffScreen() {
   const currentUser = useAppStore(s => s.currentUser)
   const logout = useAppStore(s => s.logout)
 
-  const grad = `linear-gradient(135deg, ${currentUser.gradient_from}, ${currentUser.gradient_to})`
+  const grad = `linear-gradient(135deg, ${currentUser.color_from}, ${currentUser.color_to})`
 
   return (
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>

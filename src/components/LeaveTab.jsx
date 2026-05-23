@@ -3,7 +3,7 @@ import useAppStore from '../store/useAppStore'
 import { fhS, fhLabel, genTimes, todayStr, formatJpDate } from '../utils/helpers'
 
 export default function LeaveTab() {
-  const leaveBalance = useAppStore(s => s.leaveBalance)
+  const currentUser = useAppStore(s => s.currentUser)
   const leaveRequests = useAppStore(s => s.leaveRequests)
   const settings = useAppStore(s => s.settings)
   const submitLeaveRequest = useAppStore(s => s.submitLeaveRequest)
@@ -25,7 +25,11 @@ export default function LeaveTab() {
   const snappedMins = rawMins > 0 ? Math.round(rawMins / unitMins) * unitMins : 0
   const hours = snappedMins / 60
 
-  const bal = leaveBalance || { granted_hours: 0, carry_over_hours: 0, used_hours: 0 }
+  const bal = {
+    granted_hours: currentUser?.leave_year || 0,
+    carry_over_hours: currentUser?.leave_carry || 0,
+    used_hours: currentUser?.leave_used || 0,
+  }
   const remaining = bal.granted_hours + bal.carry_over_hours - bal.used_hours
 
   const warnMsg = hours > 0 && hours > remaining
@@ -46,9 +50,9 @@ export default function LeaveTab() {
     }
   }
 
-  const statusBadge = (status) => {
-    if (status === 'approved') return <span className="badge bg">確認済み</span>
-    if (status === 'rejected') return <span className="badge br">差戻し</span>
+  const statusBadge = (confirmed) => {
+    if (confirmed === true)  return <span className="badge bg">確認済み</span>
+    if (confirmed === null)  return <span className="badge br">差戻し</span>
     return <span className="badge by">確認待ち</span>
   }
 
@@ -120,7 +124,7 @@ export default function LeaveTab() {
         {leaveRequests.length === 0
           ? <div className="empty">報告履歴はありません</div>
           : leaveRequests.map(req => {
-            const detail = `${req.start_time?.slice(0,5)}〜${req.end_time?.slice(0,5)}（${fhLabel(req.hours)}）`
+            const detail = `${req.time_from?.slice(0,5)}〜${req.time_to?.slice(0,5)}（${fhLabel(req.hours)}）`
             return (
               <div key={req.id} className="hr-row">
                 <div className="hr-info">
@@ -128,7 +132,7 @@ export default function LeaveTab() {
                   <div className="hr-detail">{detail}{req.note ? ` · ${req.note}` : ''}</div>
                 </div>
                 <span className="hr-h">{fhLabel(req.hours)}</span>
-                {statusBadge(req.status)}
+                {statusBadge(req.confirmed)}
               </div>
             )
           })
