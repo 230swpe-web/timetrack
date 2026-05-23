@@ -52,7 +52,7 @@ export default function Settings() {
       setStaffEdits(makeEdits(allStaff))
     }
     // allStaff が空でも loading 完了後は DEFAULT_STAFF のまま表示を維持
-  }, [allStaff, allLeaveBalances])
+  }, [allStaff])
 
   const updateStaff = (idx, field, value) => {
     setStaffEdits(prev => prev.map((s, i) => i === idx ? { ...s, [field]: value } : s))
