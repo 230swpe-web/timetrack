@@ -169,7 +169,7 @@ export default function Dashboard() {
         return (
           <div key={s.id} className="sc-card">
             <div className="sav" style={{ background: `linear-gradient(135deg,${s.color_from},${s.color_to})` }}>
-              {s.short_name}
+              {s.name?.replace(/\s+/g, '')[0] || '?'}
             </div>
             <div className="si">
               <div className="snm">{s.name}</div>

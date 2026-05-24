@@ -286,6 +286,7 @@ const useAppStore = create((set, get) => ({
       if (!upd.id) continue
       await supabase.from('staff').update({
         name:       upd.name,
+        short_name: upd.name.replace(/\s+/g, '')[0] || upd.short_name || '?',
         role:       upd.role,
         pin:        upd.pin,
         leave_year: upd.granted_hours,

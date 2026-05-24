@@ -39,7 +39,7 @@ export default function LeaveManagement() {
           : pending.map(r => (
             <div key={r.id} className="pi">
               <div className="pav" style={{ background: `linear-gradient(135deg,${r.staff?.color_from||'#7c8ef7'},${r.staff?.color_to||'#b39dfa'})` }}>
-                {r.staff?.short_name || '?'}
+                {r.staff?.name?.replace(/\s+/g, '')[0] || '?'}
               </div>
               <div className="pinfo">
                 <div className="pnm">{r.staff?.name || '---'}</div>
@@ -61,7 +61,7 @@ export default function LeaveManagement() {
           : confirmed.map(r => (
             <div key={r.id} className="pi">
               <div className="pav" style={{ background: `linear-gradient(135deg,${r.staff?.color_from||'#7c8ef7'},${r.staff?.color_to||'#b39dfa'})` }}>
-                {r.staff?.short_name || '?'}
+                {r.staff?.name?.replace(/\s+/g, '')[0] || '?'}
               </div>
               <div className="pinfo">
                 <div className="pnm">{r.staff?.name || '---'}</div>

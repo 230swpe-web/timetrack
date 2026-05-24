@@ -251,7 +251,7 @@ export default function Settings() {
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 fontSize: 12, fontWeight: 700, flexShrink: 0, color: '#fff',
               }}>
-                {s.short_name}
+                {s.name?.replace(/\s+/g, '')[0] || '?'}
               </div>
               <div style={{ flex: 1, fontSize: 13, fontWeight: 700, fontFamily: 'var(--mi)' }}>{s.name}</div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -292,7 +292,7 @@ export default function Settings() {
               background: `linear-gradient(135deg,${s.color_from},${s.color_to})`,
               width: 34, height: 34, fontSize: 12,
             }}>
-              {s.short_name}
+              {s.name?.replace(/\s+/g, '')[0] || '?'}
             </div>
             <div className="set-info">
               <div className="set-nm">{s.name}</div>
