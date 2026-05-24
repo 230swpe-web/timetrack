@@ -8,6 +8,8 @@ const DEFAULT_STAFF = [
   { name: '山田 太郎', short_name: '山', role: 'スタッフ',  pin: '4567', color_from: '#f47a8a', color_to: '#f7c85a', granted_hours: 40 },
 ]
 
+const EMPTY_NEW_STAFF = { name: '', role: '', pin: '', grantedHours: 40 }
+
 function makeEdits(staff) {
   return staff.map(s => ({
     id: s.id || null,
@@ -26,6 +28,8 @@ export default function Settings() {
   const settings = useAppStore(s => s.settings)
   const saveGlobalSettings = useAppStore(s => s.saveGlobalSettings)
   const saveStaffSettings = useAppStore(s => s.saveStaffSettings)
+  const changeAdminPin = useAppStore(s => s.changeAdminPin)
+  const addStaff = useAppStore(s => s.addStaff)
   const loadAdminData = useAppStore(s => s.loadAdminData)
   const showToast = useAppStore(s => s.showToast)
 
@@ -35,6 +39,17 @@ export default function Settings() {
   const [staffEdits, setStaffEdits] = useState(makeEdits(DEFAULT_STAFF))
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+
+  // 管理者PIN変更
+  const [curPin, setCurPin] = useState('')
+  const [newPin, setNewPin] = useState('')
+  const [cfmPin, setCfmPin] = useState('')
+  const [pinSaving, setPinSaving] = useState(false)
+
+  // スタッフ追加
+  const [showAddStaff, setShowAddStaff] = useState(false)
+  const [newStaff, setNewStaff] = useState(EMPTY_NEW_STAFF)
+  const [addSaving, setAddSaving] = useState(false)
 
   useEffect(() => {
     setLoading(true)
@@ -51,7 +66,6 @@ export default function Settings() {
     if (allStaff.length > 0) {
       setStaffEdits(makeEdits(allStaff))
     }
-    // allStaff が空でも loading 完了後は DEFAULT_STAFF のまま表示を維持
   }, [allStaff])
 
   const updateStaff = (idx, field, value) => {
@@ -82,7 +96,55 @@ export default function Settings() {
     }
   }
 
-  const staffSource = allStaff.length > 0 ? staffEdits : DEFAULT_STAFF.map((s, i) => ({ ...s, id: null, ...staffEdits[i] }))
+  const handlePinChange = async () => {
+    if (!/^\d{4}$/.test(newPin)) {
+      showToast('⚠ 新しいPINは4桁の数字で入力してください')
+      return
+    }
+    if (newPin !== cfmPin) {
+      showToast('⚠ 新しいPINと確認用PINが一致しません')
+      return
+    }
+    setPinSaving(true)
+    try {
+      await changeAdminPin(curPin, newPin)
+      setCurPin('')
+      setNewPin('')
+      setCfmPin('')
+      showToast('✅ 管理者PINを変更しました')
+    } catch (e) {
+      showToast(`⚠ ${e.message || 'PIN変更エラー'}`)
+    } finally {
+      setPinSaving(false)
+    }
+  }
+
+  const handleAddStaff = async () => {
+    if (!newStaff.name.trim()) {
+      showToast('⚠ 氏名を入力してください')
+      return
+    }
+    if (!/^\d{4}$/.test(newStaff.pin)) {
+      showToast('⚠ PINは4桁の数字で入力してください')
+      return
+    }
+    setAddSaving(true)
+    try {
+      await addStaff({
+        name: newStaff.name.trim(),
+        role: newStaff.role.trim() || 'スタッフ',
+        pin: newStaff.pin,
+        grantedHours: parseFloat(newStaff.grantedHours) || 40,
+      })
+      setNewStaff(EMPTY_NEW_STAFF)
+      setShowAddStaff(false)
+      showToast('✅ スタッフを追加しました')
+    } catch (e) {
+      showToast(`追加エラー: ${e.message || '不明なエラー'}`)
+    } finally {
+      setAddSaving(false)
+    }
+  }
 
   return (
     <div className="sc">
@@ -111,7 +173,73 @@ export default function Settings() {
 
       {/* ── スタッフ管理 ── */}
       <div className="set-section">
-        <div className="set-section-title">👤 スタッフ管理</div>
+        <div className="set-section-title" style={{ justifyContent: 'space-between' }}>
+          <span>👤 スタッフ管理</span>
+          <button
+            onClick={() => setShowAddStaff(v => !v)}
+            style={{
+              width: 28, height: 28, borderRadius: '50%',
+              border: 'none', background: 'linear-gradient(135deg,var(--ac),var(--pu))',
+              color: '#fff', fontSize: 18, fontWeight: 700,
+              cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+              lineHeight: 1, flexShrink: 0,
+            }}
+            title="スタッフを追加"
+          >+</button>
+        </div>
+
+        {/* スタッフ追加フォーム */}
+        {showAddStaff && (
+          <div className="staff-edit-card" style={{ marginBottom: 12, border: '1px solid var(--pu)', background: 'rgba(124,142,247,.06)' }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--pu)', marginBottom: 12 }}>＋ 新しいスタッフ</div>
+            <div className="staff-edit-grid" style={{ marginBottom: 8 }}>
+              <div>
+                <label>氏名</label>
+                <input type="text" placeholder="例：山本 次郎" value={newStaff.name}
+                  onChange={e => setNewStaff(p => ({ ...p, name: e.target.value }))} />
+              </div>
+              <div>
+                <label>役職・ステータス</label>
+                <input type="text" placeholder="例：スタッフ" value={newStaff.role}
+                  onChange={e => setNewStaff(p => ({ ...p, role: e.target.value }))} />
+              </div>
+            </div>
+            <div className="staff-edit-grid">
+              <div>
+                <label>PIN（4桁）</label>
+                <input type="text" placeholder="0000" maxLength={4} value={newStaff.pin}
+                  onChange={e => setNewStaff(p => ({ ...p, pin: e.target.value.replace(/\D/g, '') }))} />
+              </div>
+              <div>
+                <label>有給時間 / 年</label>
+                <input type="number" min="0" max="200" step="4" value={newStaff.grantedHours}
+                  onChange={e => setNewStaff(p => ({ ...p, grantedHours: e.target.value }))} />
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+              <button
+                onClick={handleAddStaff}
+                disabled={addSaving}
+                style={{
+                  flex: 1, padding: '10px 0', borderRadius: 10, border: 'none',
+                  background: 'linear-gradient(135deg,var(--ac),var(--pu))',
+                  color: '#fff', fontFamily: 'var(--fn)', fontSize: 13,
+                  fontWeight: 700, cursor: 'pointer',
+                }}
+              >{addSaving ? '追加中...' : '追加する'}</button>
+              <button
+                onClick={() => { setShowAddStaff(false); setNewStaff(EMPTY_NEW_STAFF) }}
+                style={{
+                  padding: '10px 16px', borderRadius: 10,
+                  border: '1px solid var(--bd)', background: 'transparent',
+                  color: 'var(--mu)', fontFamily: 'var(--fn)', fontSize: 13,
+                  cursor: 'pointer',
+                }}
+              >キャンセル</button>
+            </div>
+          </div>
+        )}
+
         {loading ? (
           <div className="empty" style={{ padding: '20px 0' }}>読み込み中...</div>
         ) : staffEdits.map((s, idx) => (
@@ -181,6 +309,54 @@ export default function Settings() {
             <div className="set-unit" style={{ fontSize: 9, color: 'var(--mu)' }}>PIN</div>
           </div>
         ))}
+      </div>
+
+      {/* ── 管理者PIN変更 ── */}
+      <div className="set-section">
+        <div className="set-section-title">🛡 管理者PIN変更</div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <div>
+            <label>現在のPIN</label>
+            <input
+              type="password"
+              maxLength={4}
+              placeholder="現在のPINを入力"
+              value={curPin}
+              onChange={e => setCurPin(e.target.value.replace(/\D/g, ''))}
+            />
+          </div>
+          <div>
+            <label>新しいPIN（4桁）</label>
+            <input
+              type="password"
+              maxLength={4}
+              placeholder="新しいPINを入力"
+              value={newPin}
+              onChange={e => setNewPin(e.target.value.replace(/\D/g, ''))}
+            />
+          </div>
+          <div>
+            <label>新しいPIN（確認）</label>
+            <input
+              type="password"
+              maxLength={4}
+              placeholder="もう一度入力"
+              value={cfmPin}
+              onChange={e => setCfmPin(e.target.value.replace(/\D/g, ''))}
+            />
+          </div>
+          <button
+            onClick={handlePinChange}
+            disabled={pinSaving || !curPin || !newPin || !cfmPin}
+            style={{
+              width: '100%', padding: '12px 0', borderRadius: 10, border: 'none',
+              background: 'linear-gradient(135deg,var(--ac),var(--pu))',
+              color: '#fff', fontFamily: 'var(--fn)', fontSize: 14,
+              fontWeight: 700, cursor: 'pointer',
+              opacity: (pinSaving || !curPin || !newPin || !cfmPin) ? 0.5 : 1,
+            }}
+          >{pinSaving ? '変更中...' : 'PINを変更する'}</button>
+        </div>
       </div>
 
       <button className="btn-save" onClick={handleSave} disabled={saving || loading}>

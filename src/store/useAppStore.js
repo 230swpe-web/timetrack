@@ -29,12 +29,13 @@ function buildLogs(att) {
 }
 
 function parseSettings(rows) {
-  const map = { unit: 0.5, workH: 8, carryMax: 40 }
+  const map = { unit: 0.5, workH: 8, carryMax: 40, adminPin: '0000' }
   if (!rows) return map
   rows.forEach(r => {
     if (r.key === 'unit_hours')  map.unit     = parseFloat(r.value) || 0.5
     if (r.key === 'work_hours')  map.workH    = parseFloat(r.value) || 8
     if (r.key === 'carry_max')   map.carryMax = parseFloat(r.value) || 40
+    if (r.key === 'admin_pin')   map.adminPin = r.value || '0000'
   })
   return map
 }
@@ -61,7 +62,11 @@ const useAppStore = create((set, get) => ({
 
   // ── ログイン ────────────────────────────────────────
   loginWithPin: async (pin) => {
-    if (pin === '0000') {
+    const { data: adminPinRow } = await supabase
+      .from('settings').select('value').eq('key', 'admin_pin').maybeSingle()
+    const adminPin = adminPinRow?.value || '0000'
+
+    if (pin === adminPin) {
       await get().loadAdminData()
       set({ screen: 'admin', currentUser: null })
       return { success: true, isAdmin: true }
@@ -287,6 +292,35 @@ const useAppStore = create((set, get) => ({
       }).eq('id', upd.id)
     }
     await get().loadAdminData()
+  },
+
+  changeAdminPin: async (currentPin, newPin) => {
+    const { settings } = get()
+    const storedPin = settings.adminPin || '0000'
+    if (currentPin !== storedPin) throw new Error('現在のPINが正しくありません')
+    await supabase.from('settings').upsert({ key: 'admin_pin', value: newPin }, { onConflict: 'key' })
+    set(state => ({ settings: { ...state.settings, adminPin: newPin } }))
+  },
+
+  addStaff: async ({ name, role, pin, grantedHours }) => {
+    const short_name = name.replace(/\s+/g, '')[0] || '?'
+    const palette = [
+      { color_from: '#7c8ef7', color_to: '#b39dfa' },
+      { color_from: '#2dd4a0', color_to: '#7c8ef7' },
+      { color_from: '#f7c85a', color_to: '#f47a8a' },
+      { color_from: '#f47a8a', color_to: '#f7c85a' },
+      { color_from: '#fb9c5a', color_to: '#b39dfa' },
+      { color_from: '#b39dfa', color_to: '#2dd4a0' },
+    ]
+    const { allStaff } = get()
+    const { color_from, color_to } = palette[allStaff.length % palette.length]
+    const { data, error } = await supabase.from('staff').insert({
+      name, short_name, role, pin, color_from, color_to,
+      leave_year: grantedHours, leave_carry: 0, leave_used: 0,
+    }).select().single()
+    if (error) throw error
+    await get().loadAdminData()
+    return data
   },
 
   logout: () => {
