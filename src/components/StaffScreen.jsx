@@ -13,7 +13,7 @@ export default function StaffScreen() {
   return (
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
       <div className="hdr">
-        <div className="hav" style={{ background: grad }}>{currentUser.short_name}</div>
+        <div className="hav" style={{ background: grad }}>{currentUser.name?.replace(/\s+/g, '')[0] || '?'}</div>
         <div>
           <div className="hnm">{currentUser.name}</div>
           <div className="hrl">{currentUser.role || 'スタッフ'}</div>
