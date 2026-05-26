@@ -265,6 +265,30 @@ const useAppStore = create((set, get) => ({
     return data
   },
 
+  // ── エクスポート用データ取得（25日締め期間） ──────────
+  loadExportData: async (year, month) => {
+    const startYear  = month === 1 ? year - 1 : year
+    const startMonth = month === 1 ? 12 : month - 1
+    const start      = `${startYear}-${p2(startMonth)}-26`
+    const end        = `${year}-${p2(month)}-25`
+    const [attRes, lvRes] = await Promise.all([
+      supabase.from('attendance_logs')
+        .select('*')
+        .gte('date', start)
+        .lte('date', end)
+        .order('staff_id'),
+      supabase.from('leave_reports')
+        .select('*')
+        .gte('date', start)
+        .lte('date', end)
+        .order('date'),
+    ])
+    return {
+      attendance:   attRes.data || [],
+      leaveReports: lvRes.data  || [],
+    }
+  },
+
   // ── 管理者データ ─────────────────────────────────────
   loadAdminData: async () => {
     const today = todayStr()
