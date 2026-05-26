@@ -355,6 +355,16 @@ const useAppStore = create((set, get) => ({
     }))
   },
 
+  // ── 繰越時間の手動更新 ───────────────────────────────
+  updateLeaveCarry: async (staffId, hours) => {
+    await supabase.from('staff').update({ leave_carry: hours }).eq('id', staffId)
+    set(state => ({
+      allStaff: state.allStaff.map(s =>
+        s.id === staffId ? { ...s, leave_carry: hours } : s
+      ),
+    }))
+  },
+
   // ── 毎年5月25日の有給使用済み自動リセット ──────────────
   checkAndResetLeaveUsed: async () => {
     const today = new Date()

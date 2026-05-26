@@ -3,25 +3,31 @@ import useAppStore from '../../store/useAppStore'
 import { fhLabel, fhS, formatJpDate } from '../../utils/helpers'
 
 export default function LeaveManagement() {
-  const allLeaveRequests = useAppStore(s => s.allLeaveRequests)
-  const allStaff         = useAppStore(s => s.allStaff)
-  const loadAdminData    = useAppStore(s => s.loadAdminData)
-  const approveLeave     = useAppStore(s => s.approveLeave)
-  const rejectLeave      = useAppStore(s => s.rejectLeave)
-  const updateLeaveUsed  = useAppStore(s => s.updateLeaveUsed)
-  const showToast        = useAppStore(s => s.showToast)
+  const allLeaveRequests  = useAppStore(s => s.allLeaveRequests)
+  const allStaff          = useAppStore(s => s.allStaff)
+  const loadAdminData     = useAppStore(s => s.loadAdminData)
+  const approveLeave      = useAppStore(s => s.approveLeave)
+  const rejectLeave       = useAppStore(s => s.rejectLeave)
+  const updateLeaveUsed   = useAppStore(s => s.updateLeaveUsed)
+  const updateLeaveCarry  = useAppStore(s => s.updateLeaveCarry)
+  const showToast         = useAppStore(s => s.showToast)
 
-  // 使用済み時間の編集状態 { [staffId]: number }
-  const [editedUsed, setEditedUsed] = useState({})
-  const [savingId, setSavingId]     = useState(null)
+  const [editedUsed,  setEditedUsed]  = useState({})
+  const [editedCarry, setEditedCarry] = useState({})
+  // savingKey: `${staffId}-used` or `${staffId}-carry`
+  const [savingKey, setSavingKey] = useState(null)
 
   useEffect(() => { loadAdminData() }, [])
 
-  // allStaff が更新されたら編集状態を初期化
   useEffect(() => {
-    const initial = {}
-    allStaff.forEach(s => { initial[s.id] = s.leave_used ?? 0 })
-    setEditedUsed(initial)
+    const initUsed  = {}
+    const initCarry = {}
+    allStaff.forEach(s => {
+      initUsed[s.id]  = s.leave_used  ?? 0
+      initCarry[s.id] = s.leave_carry ?? 0
+    })
+    setEditedUsed(initUsed)
+    setEditedCarry(initCarry)
   }, [allStaff])
 
   const pending   = allLeaveRequests.filter(r => r.confirmed === false)
@@ -31,22 +37,36 @@ export default function LeaveManagement() {
     await approveLeave(id)
     showToast('✅ 確認済みにしました')
   }
-
   const handleReject = async (id) => {
     await rejectLeave(id)
     showToast('差戻しました')
   }
 
   const handleSaveUsed = async (staffId) => {
+    const key   = `${staffId}-used`
     const hours = parseFloat(editedUsed[staffId]) || 0
-    setSavingId(staffId)
+    setSavingKey(key)
     try {
       await updateLeaveUsed(staffId, hours)
       showToast('✅ 使用済み時間を更新しました')
     } catch {
       showToast('更新エラーが発生しました')
     } finally {
-      setSavingId(null)
+      setSavingKey(null)
+    }
+  }
+
+  const handleSaveCarry = async (staffId) => {
+    const key   = `${staffId}-carry`
+    const hours = parseFloat(editedCarry[staffId]) || 0
+    setSavingKey(key)
+    try {
+      await updateLeaveCarry(staffId, hours)
+      showToast('✅ 繰越時間を更新しました')
+    } catch {
+      showToast('更新エラーが発生しました')
+    } finally {
+      setSavingKey(null)
     }
   }
 
@@ -61,7 +81,7 @@ export default function LeaveManagement() {
     background: 'var(--bg)', color: 'var(--tx)', fontFamily: 'var(--fn)',
     fontSize: 13, textAlign: 'right',
   }
-  const saveBtnStyle = (disabled) => ({
+  const saveBtn = (disabled) => ({
     padding: '4px 10px', borderRadius: 6, border: 'none',
     background: disabled ? 'var(--bd)' : 'linear-gradient(135deg,var(--ac),var(--pu))',
     color: '#fff', fontFamily: 'var(--fn)', fontSize: 12,
@@ -77,23 +97,52 @@ export default function LeaveManagement() {
         {allStaff.length === 0
           ? <div className="empty">スタッフデータを読み込み中...</div>
           : allStaff.map(s => {
-            const used      = editedUsed[s.id] ?? s.leave_used ?? 0
-            const granted   = s.leave_year  ?? 0
-            const carry     = s.leave_carry ?? 0
+            const used      = editedUsed[s.id]  ?? s.leave_used  ?? 0
+            const carry     = editedCarry[s.id] ?? s.leave_carry ?? 0
+            const granted   = s.leave_year ?? 0
             const remaining = granted + carry - used
-            const isSaving  = savingId === s.id
+            const savingUsed  = savingKey === `${s.id}-used`
+            const savingCarry = savingKey === `${s.id}-carry`
             return (
               <div key={s.id} style={{ padding: '10px 0', borderBottom: '1px solid var(--bd)' }}>
-                {/* スタッフ名行 */}
+                {/* スタッフ名 */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
                   <div className="pav" style={{
                     background: `linear-gradient(135deg,${s.color_from||'#7c8ef7'},${s.color_to||'#b39dfa'})`,
                   }}>
                     {s.name?.replace(/\s+/g, '')[0] || '?'}
                   </div>
-                  <div className="pnm" style={{ flex: 1 }}>{s.name}</div>
-                  {/* 使用済み入力 */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
+                  <div className="pnm">{s.name}</div>
+                </div>
+                {/* 繰越・使用済み 入力行 */}
+                <div style={{
+                  display: 'flex', flexWrap: 'wrap', gap: 8,
+                  paddingLeft: 40, marginBottom: 6,
+                }}>
+                  {/* 繰越 */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <span style={{ fontSize: 11, color: 'var(--mu)' }}>繰越</span>
+                    <input
+                      type="number"
+                      value={carry}
+                      min="0"
+                      step="0.5"
+                      style={inputStyle}
+                      onChange={e => setEditedCarry(p => ({
+                        ...p, [s.id]: parseFloat(e.target.value) || 0,
+                      }))}
+                    />
+                    <span style={{ fontSize: 11, color: 'var(--mu)' }}>h</span>
+                    <button
+                      style={saveBtn(savingCarry)}
+                      disabled={savingCarry}
+                      onClick={() => handleSaveCarry(s.id)}
+                    >
+                      {savingCarry ? '...' : '保存'}
+                    </button>
+                  </div>
+                  {/* 使用済み */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                     <span style={{ fontSize: 11, color: 'var(--mu)' }}>使用済み</span>
                     <input
                       type="number"
@@ -107,11 +156,11 @@ export default function LeaveManagement() {
                     />
                     <span style={{ fontSize: 11, color: 'var(--mu)' }}>h</span>
                     <button
-                      style={saveBtnStyle(isSaving)}
-                      disabled={isSaving}
+                      style={saveBtn(savingUsed)}
+                      disabled={savingUsed}
                       onClick={() => handleSaveUsed(s.id)}
                     >
-                      {isSaving ? '...' : '保存'}
+                      {savingUsed ? '...' : '保存'}
                     </button>
                   </div>
                 </div>
