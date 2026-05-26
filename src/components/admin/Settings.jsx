@@ -212,7 +212,7 @@ export default function Settings() {
               </div>
               <div>
                 <label>有給時間 / 年</label>
-                <input type="number" min="0" max="200" step="4" value={newStaff.grantedHours}
+                <input type="number" min="0" max="200" step="0.5" value={newStaff.grantedHours}
                   onChange={e => setNewStaff(p => ({ ...p, grantedHours: e.target.value }))} />
               </div>
             </div>
@@ -259,7 +259,7 @@ export default function Settings() {
                   type="number"
                   className="set-val"
                   value={s.granted_hours}
-                  min="0" max="200" step="4"
+                  min="0" max="200" step="0.5"
                   onChange={e => updateStaff(idx, 'granted_hours', parseFloat(e.target.value) || 0)}
                 />
                 <span style={{ fontSize: 11, color: 'var(--mu)', whiteSpace: 'nowrap' }}>h / 年</span>

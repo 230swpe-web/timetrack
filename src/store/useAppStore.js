@@ -61,6 +61,18 @@ const useAppStore = create((set, get) => ({
     setTimeout(() => set({ toast: null }), duration)
   },
 
+  // ── ログイン画面の初期データ取得（PIN候補表示用） ──────
+  loadLoginData: async () => {
+    const [staffRes, pinRes] = await Promise.all([
+      supabase.from('staff').select('id, name, pin, color_from, color_to').order('created_at'),
+      supabase.from('settings').select('value').eq('key', 'admin_pin').maybeSingle(),
+    ])
+    set(state => ({
+      allStaff: staffRes.data || [],
+      settings: { ...state.settings, adminPin: pinRes.data?.value || '0000' },
+    }))
+  },
+
   // ── ログイン ────────────────────────────────────────
   loginWithPin: async (pin) => {
     const { data: adminPinRow } = await supabase

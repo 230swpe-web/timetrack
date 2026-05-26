@@ -1,26 +1,42 @@
-import { useState, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import useAppStore from '../store/useAppStore'
 
 export default function Login() {
-  const [buf, setBuf] = useState('')
-  const [dots, setDots] = useState([false, false, false, false])
+  const [buf, setBuf]         = useState('')
+  const [dots, setDots]       = useState([false, false, false, false])
   const [errDots, setErrDots] = useState(false)
-  const [errMsg, setErrMsg] = useState('')
+  const [errMsg, setErrMsg]   = useState('')
   const [preview, setPreview] = useState('')
-  const [shake, setShake] = useState(false)
+  const [shake, setShake]     = useState(false)
   const [checking, setChecking] = useState(false)
-  const loginWithPin = useAppStore(s => s.loginWithPin)
-  const allStaff = useAppStore(s => s.allStaff)
+
+  const loginWithPin  = useAppStore(s => s.loginWithPin)
+  const loadLoginData = useAppStore(s => s.loadLoginData)
+  const allStaff      = useAppStore(s => s.allStaff)
+  const settings      = useAppStore(s => s.settings)
+
+  useEffect(() => { loadLoginData() }, [])
+
+  const resolvePreview = (input) => {
+    if (!input) return ''
+    const adminPin = settings.adminPin || '0000'
+
+    const adminMatch = adminPin.startsWith(input)
+    const staffMatches = allStaff.filter(s => s.pin && s.pin.startsWith(input))
+
+    const totalMatches = (adminMatch ? 1 : 0) + staffMatches.length
+
+    if (totalMatches === 0) return '----'
+    if (totalMatches > 1)  return '----'
+    // ちょうど1件
+    if (adminMatch) return '管理者'
+    return staffMatches[0].name
+  }
 
   const updateUI = (newBuf) => {
     setDots([0, 1, 2, 3].map(i => i < newBuf.length))
     setErrDots(false)
-    if (!newBuf) {
-      setPreview('')
-      return
-    }
-    if ('0000'.startsWith(newBuf)) { setPreview('管理者'); return }
-    // Preview uses allStaff from store if loaded, otherwise blank (will be checked on submit)
+    setPreview(resolvePreview(newBuf))
   }
 
   const press = (d) => {
@@ -61,9 +77,8 @@ export default function Login() {
   }
 
   const dotClass = (i) => {
-    const on = dots[i]
     if (errDots) return 'pd err'
-    if (on) return 'pd on'
+    if (dots[i]) return 'pd on'
     return 'pd'
   }
 
