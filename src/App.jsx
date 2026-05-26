@@ -6,7 +6,10 @@ import AdminScreen from './components/AdminScreen'
 
 export default function App() {
   const screen = useAppStore(s => s.screen)
-  const toast = useAppStore(s => s.toast)
+  const toast  = useAppStore(s => s.toast)
+  const checkAndResetLeaveUsed = useAppStore(s => s.checkAndResetLeaveUsed)
+
+  useEffect(() => { checkAndResetLeaveUsed() }, [])
 
   return (
     <>

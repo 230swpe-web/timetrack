@@ -2,13 +2,13 @@ import { useState, useEffect } from 'react'
 import useAppStore from '../../store/useAppStore'
 
 const DEFAULT_STAFF = [
-  { name: '田中 花子', short_name: '田', role: 'リーダー', pin: '1234', color_from: '#7c8ef7', color_to: '#b39dfa', granted_hours: 40 },
-  { name: '鈴木 一郎', short_name: '鈴', role: 'スタッフ',  pin: '2345', color_from: '#2dd4a0', color_to: '#7c8ef7', granted_hours: 40 },
-  { name: '佐藤 美咲', short_name: '佐', role: 'パート',    pin: '3456', color_from: '#f7c85a', color_to: '#f47a8a', granted_hours: 32 },
-  { name: '山田 太郎', short_name: '山', role: 'スタッフ',  pin: '4567', color_from: '#f47a8a', color_to: '#f7c85a', granted_hours: 40 },
+  { name: '田中 花子', short_name: '田', role: 'リーダー', pin: '1234', color_from: '#7c8ef7', color_to: '#b39dfa', granted_hours: 80 },
+  { name: '鈴木 一郎', short_name: '鈴', role: 'スタッフ',  pin: '2345', color_from: '#2dd4a0', color_to: '#7c8ef7', granted_hours: 80 },
+  { name: '佐藤 美咲', short_name: '佐', role: 'パート',    pin: '3456', color_from: '#f7c85a', color_to: '#f47a8a', granted_hours: 80 },
+  { name: '山田 太郎', short_name: '山', role: 'スタッフ',  pin: '4567', color_from: '#f47a8a', color_to: '#f7c85a', granted_hours: 80 },
 ]
 
-const EMPTY_NEW_STAFF = { name: '', role: '', pin: '', grantedHours: 40 }
+const EMPTY_NEW_STAFF = { name: '', role: '', pin: '', grantedHours: 80 }
 
 function makeEdits(staff) {
   return staff.map(s => ({
@@ -19,7 +19,7 @@ function makeEdits(staff) {
     pin: s.pin,
     color_from: s.color_from,
     color_to: s.color_to,
-    granted_hours: s.leave_year ?? s.granted_hours ?? 40,
+    granted_hours: s.leave_year ?? s.granted_hours ?? 80,
   }))
 }
 
@@ -134,7 +134,7 @@ export default function Settings() {
         name: newStaff.name.trim(),
         role: newStaff.role.trim() || 'スタッフ',
         pin: newStaff.pin,
-        grantedHours: parseFloat(newStaff.grantedHours) || 40,
+        grantedHours: parseFloat(newStaff.grantedHours) || 80,
       })
       setNewStaff(EMPTY_NEW_STAFF)
       setShowAddStaff(false)

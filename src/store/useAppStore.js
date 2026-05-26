@@ -54,6 +54,7 @@ const useAppStore = create((set, get) => ({
   settings:          { unit: 0.5, workH: 8, carryMax: 40 },
   loading:           false,
   toast:             null,
+  _staffChannel:     null,
 
   showToast: (msg, duration = 2500) => {
     set({ toast: msg })
@@ -88,7 +89,44 @@ const useAppStore = create((set, get) => ({
     set({ currentUser: data })
     await get().loadUserData(data.id)
     set({ screen: 'staff' })
+    get().subscribeToCurrentUser()
     return { success: true, isAdmin: false }
+  },
+
+  // ── リアルタイム購読（管理者が有給時間を変更したとき即時反映） ──
+  subscribeToCurrentUser: () => {
+    const { currentUser } = get()
+    if (!currentUser?.id) return
+    get().unsubscribeFromCurrentUser()
+    const channel = supabase
+      .channel(`staff-user-${currentUser.id}`)
+      .on('postgres_changes', {
+        event:  'UPDATE',
+        schema: 'public',
+        table:  'staff',
+        filter: `id=eq.${currentUser.id}`,
+      }, (payload) => {
+        if (payload.new) {
+          set(state => ({ currentUser: { ...state.currentUser, ...payload.new } }))
+        }
+      })
+      .subscribe()
+    set({ _staffChannel: channel })
+  },
+
+  unsubscribeFromCurrentUser: () => {
+    const { _staffChannel } = get()
+    if (_staffChannel) {
+      supabase.removeChannel(_staffChannel)
+      set({ _staffChannel: null })
+    }
+  },
+
+  refreshCurrentUser: async () => {
+    const { currentUser } = get()
+    if (!currentUser?.id) return
+    const { data } = await supabase.from('staff').select('*').eq('id', currentUser.id).single()
+    if (data) set({ currentUser: data })
   },
 
   // ── スタッフデータ読み込み ──────────────────────────
@@ -295,6 +333,52 @@ const useAppStore = create((set, get) => ({
     await get().loadAdminData()
   },
 
+  // ── 使用済み時間の手動更新 ───────────────────────────
+  updateLeaveUsed: async (staffId, hours) => {
+    await supabase.from('staff').update({ leave_used: hours }).eq('id', staffId)
+    set(state => ({
+      allStaff: state.allStaff.map(s =>
+        s.id === staffId ? { ...s, leave_used: hours } : s
+      ),
+    }))
+  },
+
+  // ── 毎年5月25日の有給使用済み自動リセット ──────────────
+  checkAndResetLeaveUsed: async () => {
+    const today = new Date()
+    const year  = today.getFullYear()
+    const resetThisYear = new Date(year, 4, 25) // 5月25日（月は0始まり）
+
+    if (today < resetThisYear) return // まだリセット日を過ぎていない
+
+    // 前回リセット日をDBから取得
+    const { data: row } = await supabase
+      .from('settings')
+      .select('value')
+      .eq('key', 'leave_reset_date')
+      .maybeSingle()
+
+    if (row?.value) {
+      const lastReset = new Date(row.value)
+      if (lastReset >= resetThisYear) return // 今年度はリセット済み
+    }
+
+    // leave_used を全スタッフ 0 にリセット（leave_reports は保持）
+    await supabase.from('staff')
+      .update({ leave_used: 0 })
+      .gte('created_at', '2000-01-01')
+
+    // リセット日を記録（二重リセット防止）
+    const resetDateStr = `${year}-05-25`
+    await supabase.from('settings')
+      .upsert({ key: 'leave_reset_date', value: resetDateStr }, { onConflict: 'key' })
+
+    // ストア内の allStaff も即時反映
+    set(state => ({
+      allStaff: state.allStaff.map(s => ({ ...s, leave_used: 0 })),
+    }))
+  },
+
   changeAdminPin: async (currentPin, newPin) => {
     const { settings } = get()
     const storedPin = settings.adminPin || '0000'
@@ -317,7 +401,7 @@ const useAppStore = create((set, get) => ({
     const { color_from, color_to } = palette[allStaff.length % palette.length]
     const { data, error } = await supabase.from('staff').insert({
       name, short_name, role, pin, color_from, color_to,
-      leave_year: grantedHours, leave_carry: 0, leave_used: 0,
+      leave_year: grantedHours ?? 80, leave_carry: 0, leave_used: 0,
     }).select().single()
     if (error) throw error
     await get().loadAdminData()
@@ -325,6 +409,7 @@ const useAppStore = create((set, get) => ({
   },
 
   logout: () => {
+    get().unsubscribeFromCurrentUser()
     set({
       screen:        'login',
       currentUser:   null,

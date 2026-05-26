@@ -8,6 +8,9 @@ export default function LeaveTab() {
   const settings = useAppStore(s => s.settings)
   const submitLeaveRequest = useAppStore(s => s.submitLeaveRequest)
   const showToast = useAppStore(s => s.showToast)
+  const refreshCurrentUser = useAppStore(s => s.refreshCurrentUser)
+
+  useEffect(() => { refreshCurrentUser() }, [])
 
   const today = todayStr()
   const [date, setDate] = useState(today)

@@ -84,17 +84,44 @@ INSERT INTO staff (name, short_name, role, pin, gradient_from, gradient_to, disp
   ('山田 太郎', '山', 'スタッフ',  '4567', '#f47a8a', '#f7c85a', 4)
 ON CONFLICT DO NOTHING;
 
--- Leave balances (current fiscal year 2025)
+-- Leave balances (current fiscal year 2025) — default 80h
 INSERT INTO leave_balance (staff_id, fiscal_year, granted_hours, carry_over_hours, used_hours)
-SELECT id, 2025, 40, 8,  6   FROM staff WHERE pin = '1234' ON CONFLICT DO NOTHING;
+SELECT id, 2025, 80, 8,  6   FROM staff WHERE pin = '1234' ON CONFLICT DO NOTHING;
 INSERT INTO leave_balance (staff_id, fiscal_year, granted_hours, carry_over_hours, used_hours)
-SELECT id, 2025, 40, 0,  4.5 FROM staff WHERE pin = '2345' ON CONFLICT DO NOTHING;
+SELECT id, 2025, 80, 0,  4.5 FROM staff WHERE pin = '2345' ON CONFLICT DO NOTHING;
 INSERT INTO leave_balance (staff_id, fiscal_year, granted_hours, carry_over_hours, used_hours)
-SELECT id, 2025, 32, 16, 2   FROM staff WHERE pin = '3456' ON CONFLICT DO NOTHING;
+SELECT id, 2025, 80, 16, 2   FROM staff WHERE pin = '3456' ON CONFLICT DO NOTHING;
 INSERT INTO leave_balance (staff_id, fiscal_year, granted_hours, carry_over_hours, used_hours)
-SELECT id, 2025, 40, 24, 8   FROM staff WHERE pin = '4567' ON CONFLICT DO NOTHING;
+SELECT id, 2025, 80, 24, 8   FROM staff WHERE pin = '4567' ON CONFLICT DO NOTHING;
+
+-- ── REALTIME（staff テーブルのリアルタイム変更通知を有効化） ──
+-- Supabase ダッシュボード → Database → Replication で staff テーブルを
+-- 有効化するか、以下のコマンドをSQL Editorで実行してください:
+-- ALTER PUBLICATION supabase_realtime ADD TABLE staff;
 
 -- Default global settings
 INSERT INTO app_settings (key, value) VALUES
   ('global_settings', '{"unit": 0.5, "workH": 8, "carryMax": 40}')
 ON CONFLICT (key) DO NOTHING;
+
+-- ────────────────────────────────────────────────────────────────
+-- 【手順1】テストデータのリセット：全スタッフの使用済み時間を0にする
+--   Supabase SQL Editor でそのまま実行してください
+-- ────────────────────────────────────────────────────────────────
+-- UPDATE staff SET leave_used = 0;
+
+-- ────────────────────────────────────────────────────────────────
+-- 【手順2】settings テーブルに leave_reset_date キーを追加
+--   アプリの自動リセット（毎年5月25日）の二重実行防止に使用します
+--   初期値は「未リセット」を示すため、わざと設定しない or 古い日付にする
+-- ────────────────────────────────────────────────────────────────
+-- INSERT INTO settings (key, value)
+--   VALUES ('leave_reset_date', '2000-01-01')
+--   ON CONFLICT (key) DO NOTHING;
+
+-- ────────────────────────────────────────────────────────────────
+-- 【参考】手動で今年度のリセットを記録する場合（二重リセット防止）
+-- ────────────────────────────────────────────────────────────────
+-- INSERT INTO settings (key, value)
+--   VALUES ('leave_reset_date', '2026-05-25')
+--   ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value;
