@@ -112,7 +112,7 @@ export async function exportExcel(allStaff, attendance, leaveReports, year, mont
     })
     return row
   })
-
+　
   const summaryRow = Array(totalCols).fill('')
   allStaff.forEach((s, i) => {
     const satts     = attendance.filter(a => a.staff_id === s.id && a.clock_in)
