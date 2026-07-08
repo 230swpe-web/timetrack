@@ -61,8 +61,8 @@ function buildStaffRows(allStaff, attendance, leaveReports) {
 
 export async function exportExcel(allStaff, attendance, leaveReports, year, month) {
   const XLSX = await import('xlsx')
-  const { startMonth, startYear: closingStartYear } = getClosingPeriod(year, month)
-  const startYear = closingStartYear !== undefined ? closingStartYear : (month === 1 ? year - 1 : year)
+ const { startMonth } = getClosingPeriod(year, month)
+ const startYear = month === 1 ? year - 1 : year
   const dates     = getDatesInPeriod(year, month)
   const today     = new Date()
   const todayStr  = `${today.getFullYear()}-${p2(today.getMonth()+1)}-${p2(today.getDate())} ${p2(today.getHours())}:${p2(today.getMinutes())}`
