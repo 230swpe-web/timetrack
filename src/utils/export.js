@@ -1,6 +1,5 @@
 import { p2 } from './helpers'
 
-// —— 25日締め期間の計算 ————————————————————————————
 export function getClosingPeriod(year, month) {
   const startYear  = month === 1 ? year - 1 : year
   const startMonth = month === 1 ? 12 : month - 1
@@ -13,7 +12,6 @@ export function getClosingPeriod(year, month) {
   }
 }
 
-// —— 勤怠1レコードの実働時間(h)を計算 ————————————————————————————
 function calcWorkH(att) {
   if (!att?.clock_in || !att?.clock_out) return 0
   const mins = Math.floor(
@@ -22,14 +20,12 @@ function calcWorkH(att) {
   return Math.max(0, mins) / 60
 }
 
-// —— 時刻文字列を HH:MM 形式に変換 ————————————————————————————
 function toHHMM(datetimeStr) {
   if (!datetimeStr) return ''
   const d = new Date(datetimeStr)
   return `${p2(d.getHours())}:${p2(d.getMinutes())}`
 }
 
-// —— 期間内の日付一覧を生成 ————————————————————————————
 function getDatesInPeriod(year, month) {
   const startYear  = month === 1 ? year - 1 : year
   const startMonth = month === 1 ? 12 : month - 1
@@ -42,7 +38,6 @@ function getDatesInPeriod(year, month) {
   return dates
 }
 
-// —— 曜日ラベル ————————————————————————————
 const WEEKDAYS = ['日', '月', '火', '水', '木', '金', '土']
 
 function formatDateLabel(d) {
@@ -52,7 +47,6 @@ function formatDateLabel(d) {
   return `${m}月${day}日(${w})`
 }
 
-// —— スタッフごとの月次サマリーを生成 ————————————————————————————
 function buildStaffRows(allStaff, attendance, leaveReports) {
   return allStaff.map(s => {
     const satts      = attendance.filter(a => a.staff_id === s.id)
@@ -65,14 +59,14 @@ function buildStaffRows(allStaff, attendance, leaveReports) {
   })
 }
 
-// —— Excel (xlsx) エクスポート ————————————————————————————
 export async function exportExcel(allStaff, attendance, leaveReports, year, month) {
   const XLSX = await import('xlsx')
-  const { startMonth } = getClosingPeriod(year, month)
-  const dates    = getDatesInPeriod(year, month)
-  const today    = new Date()
-  const todayStr = `${today.getFullYear()}-${p2(today.getMonth()+1)}-${p2(today.getDate())} ${p2(today.getHours())}:${p2(today.getMinutes())}`
-  const periodStr = `${year}年${startMonth}月26日〜${year}年${month}月25日`
+  const { startMonth, startYear: closingStartYear } = getClosingPeriod(year, month)
+  const startYear = closingStartYear !== undefined ? closingStartYear : (month === 1 ? year - 1 : year)
+  const dates     = getDatesInPeriod(year, month)
+  const today     = new Date()
+  const todayStr  = `${today.getFullYear()}-${p2(today.getMonth()+1)}-${p2(today.getDate())} ${p2(today.getHours())}:${p2(today.getMinutes())}`
+  const periodStr = `${startYear}年${startMonth}月26日〜${year}年${month}月25日`
 
   const staffCount = allStaff.length
   const totalCols  = 1 + staffCount * 3
@@ -112,7 +106,7 @@ export async function exportExcel(allStaff, attendance, leaveReports, year, mont
     })
     return row
   })
-　
+
   const summaryRow = Array(totalCols).fill('')
   allStaff.forEach((s, i) => {
     const satts     = attendance.filter(a => a.staff_id === s.id && a.clock_in)
@@ -154,7 +148,6 @@ export async function exportExcel(allStaff, attendance, leaveReports, year, mont
   XLSX.writeFile(wb, `timetrack_${year}${p2(month)}.xlsx`)
 }
 
-// —— PDF エクスポート（印刷ダイアログ経由）————————————————————————————
 export function exportPDF(allStaff, attendance, leaveReports, year, month) {
   const { title } = getClosingPeriod(year, month)
   const rows      = buildStaffRows(allStaff, attendance, leaveReports)
