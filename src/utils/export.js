@@ -225,4 +225,4 @@ export function exportPDF(allStaff, attendance, leaveReports, year, month) {
   const w = window.open('', '_blank', 'width=1100,height=750')
   w.document.write(html)
   w.document.close()
-}
+}　
