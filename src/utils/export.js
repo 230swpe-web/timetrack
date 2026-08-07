@@ -23,7 +23,11 @@ function calcWorkH(att) {
 function toHHMM(datetimeStr) {
   if (!datetimeStr) return ''
   const d = new Date(datetimeStr)
-  return `${p2(d.getHours())}:${p2(d.getMinutes())}`
+  if (isNaN(d)) return ''
+  // JST固定で表示（UTC文字列の日付ズレ・端末設定の影響を受けない）
+  return d.toLocaleTimeString('ja-JP', {
+    timeZone: 'Asia/Tokyo', hour: '2-digit', minute: '2-digit', hour12: false,
+  })
 }
 
 function getDatesInPeriod(year, month) {
@@ -93,10 +97,11 @@ export async function exportExcel(allStaff, attendance, leaveReports, year, mont
     const row = Array(totalCols).fill('')
     row[0] = formatDateLabel(d)
     allStaff.forEach((s, i) => {
+      // clock_in(UTC文字列)の前方一致は日付がズレるため、date カラムで判定する
       const att = attendance.find(a =>
         a.staff_id === s.id &&
         a.clock_in &&
-        a.clock_in.startsWith(dateStr)
+        a.date === dateStr
       )
       if (att) {
         row[1 + i * 3]     = toHHMM(att.clock_in)

@@ -27,15 +27,21 @@ export function genTimes() {
   return t
 }
 
-export function todayStr() {
-  const now = new Date()
-  return `${now.getFullYear()}-${p2(now.getMonth() + 1)}-${p2(now.getDate())}`
+// 日本時間(JST)基準の日付文字列 YYYY-MM-DD を返す
+// base にサーバー時刻を渡せば、端末の時計や地域設定に依存しない
+export function todayStr(base = new Date()) {
+  return base.toLocaleDateString('en-CA', { timeZone: 'Asia/Tokyo' })
 }
 
+// タイムスタンプを日本時間(JST)の HH:MM で表示する
+// 端末のタイムゾーン設定に関わらず常にJSTで表示される
 export function toHM(isoString) {
   if (!isoString) return '--:--'
   const d = new Date(isoString)
-  return `${p2(d.getHours())}:${p2(d.getMinutes())}`
+  if (isNaN(d)) return '--:--'
+  return d.toLocaleTimeString('ja-JP', {
+    timeZone: 'Asia/Tokyo', hour: '2-digit', minute: '2-digit', hour12: false,
+  })
 }
 
 export function formatJpDate(dateStr) {

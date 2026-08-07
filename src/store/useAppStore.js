@@ -7,6 +7,22 @@ import {
 
 const days = ['日', '月', '火', '水', '木', '金', '土']
 
+// ── サーバー時刻の取得 ────────────────────────────────
+// 打刻時刻は端末の時計ではなく Supabase サーバーの時計(NTP同期済み)を使う。
+// 端末の時計が狂っていても正しい時刻で記録される。
+// RPC が使えない場合のみ端末時刻にフォールバックする。
+async function getServerNow() {
+  try {
+    const { data, error } = await supabase.rpc('server_now')
+    if (!error && data) {
+      const d = new Date(data)
+      if (!isNaN(d)) return d
+    }
+  } catch { /* fallthrough */ }
+  console.warn('server_now RPC が利用できないため端末時刻を使用します')
+  return new Date()
+}
+
 // ── 実際のDBスキーマ ──────────────────────────────────
 // staff: id, name, short_name, role, pin, color_from, color_to,
 //        leave_year, leave_carry, leave_used, created_at
@@ -194,8 +210,8 @@ const useAppStore = create((set, get) => ({
   // ── 打刻 ────────────────────────────────────────────
   clockIn: async () => {
     const { currentUser, attendance } = get()
-    const now = new Date()
-    const hm  = `${p2(now.getHours())}:${p2(now.getMinutes())}`
+    const now = await getServerNow()
+    const hm  = toHM(now.toISOString())
     let result
     if (attendance) {
       const { data } = await supabase.from('attendance_logs')
@@ -204,7 +220,7 @@ const useAppStore = create((set, get) => ({
       result = data
     } else {
       const { data } = await supabase.from('attendance_logs')
-        .insert({ staff_id: currentUser.id, date: todayStr(), clock_in: now.toISOString(), status: 'working' })
+        .insert({ staff_id: currentUser.id, date: todayStr(now), clock_in: now.toISOString(), status: 'working' })
         .select().single()
       result = data
     }
@@ -214,8 +230,8 @@ const useAppStore = create((set, get) => ({
   breakStart: async () => {
     const { attendance, todayLogs } = get()
     if (!attendance) return
-    const now = new Date()
-    const hm  = `${p2(now.getHours())}:${p2(now.getMinutes())}`
+    const now = await getServerNow()
+    const hm  = toHM(now.toISOString())
     const { data } = await supabase.from('attendance_logs')
       .update({ break_start: now.toISOString(), status: 'on_break', updated_at: now.toISOString() })
       .eq('id', attendance.id).select().single()
@@ -225,8 +241,8 @@ const useAppStore = create((set, get) => ({
   breakEnd: async () => {
     const { attendance, todayLogs } = get()
     if (!attendance?.break_start) return
-    const now  = new Date()
-    const hm   = `${p2(now.getHours())}:${p2(now.getMinutes())}`
+    const now  = await getServerNow()
+    const hm   = toHM(now.toISOString())
     const mins = Math.floor((now - new Date(attendance.break_start)) / 60000)
     const totalMins = (attendance.break_minutes || 0) + mins
     const { data } = await supabase.from('attendance_logs')
@@ -238,8 +254,8 @@ const useAppStore = create((set, get) => ({
   clockOut: async () => {
     const { attendance, todayLogs } = get()
     if (!attendance) return
-    const now = new Date()
-    const hm  = `${p2(now.getHours())}:${p2(now.getMinutes())}`
+    const now = await getServerNow()
+    const hm  = toHM(now.toISOString())
     const { data } = await supabase.from('attendance_logs')
       .update({ clock_out: now.toISOString(), status: 'done', updated_at: now.toISOString() })
       .eq('id', attendance.id).select().single()
