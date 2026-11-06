@@ -405,13 +405,17 @@ const useAppStore = create((set, get) => ({
     }))
   },
 
-  // ── 毎年5月25日の有給使用済み自動リセット ──────────────
+  // ── 毎年9月1日（決算8月末の翌日）の有給使用済み自動リセット ──
+  // 年度は 9月1日〜翌年8月31日。
+  // 2026年度（2026/9〜）は運用途中で切り替えたため、最初の自動リセットは 2027年9月1日。
   checkAndResetLeaveUsed: async () => {
     const today = new Date()
     const year  = today.getFullYear()
-    const resetThisYear = new Date(year, 4, 25) // 5月25日（月は0始まり）
+    const resetThisYear = new Date(year, 8, 1) // 9月1日（月は0始まり）
+    const firstReset    = new Date(2027, 8, 1)
 
-    if (today < resetThisYear) return // まだリセット日を過ぎていない
+    if (today < firstReset) return     // 切り替え前は自動リセットしない
+    if (today < resetThisYear) return  // まだ今年のリセット日を過ぎていない
 
     // 前回リセット日をDBから取得
     const { data: row } = await supabase
@@ -431,7 +435,7 @@ const useAppStore = create((set, get) => ({
       .gte('created_at', '2000-01-01')
 
     // リセット日を記録（二重リセット防止）
-    const resetDateStr = `${year}-05-25`
+    const resetDateStr = `${year}-09-01`
     await supabase.from('settings')
       .upsert({ key: 'leave_reset_date', value: resetDateStr }, { onConflict: 'key' })
 
@@ -463,7 +467,7 @@ const useAppStore = create((set, get) => ({
     const { color_from, color_to } = palette[allStaff.length % palette.length]
     const { data, error } = await supabase.from('staff').insert({
       name, short_name, role, pin, color_from, color_to,
-      leave_year: grantedHours ?? 80, leave_carry: 0, leave_used: 0,
+      leave_year: grantedHours ?? 88, leave_carry: 0, leave_used: 0,
     }).select().single()
     if (error) throw error
     await get().loadAdminData()

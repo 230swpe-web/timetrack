@@ -19,7 +19,7 @@ function makeEdits(staff) {
     pin: s.pin,
     color_from: s.color_from,
     color_to: s.color_to,
-    granted_hours: s.leave_year ?? s.granted_hours ?? 80,
+    granted_hours: s.leave_year ?? s.granted_hours ?? 88,
   }))
 }
 
