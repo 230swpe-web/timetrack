@@ -387,7 +387,8 @@ const useAppStore = create((set, get) => ({
 
   // ── 使用済み時間の手動更新 ───────────────────────────
   updateLeaveUsed: async (staffId, hours) => {
-    await supabase.from('staff').update({ leave_used: hours }).eq('id', staffId)
+    const { error } = await supabase.from('staff').update({ leave_used: hours }).eq('id', staffId)
+    if (error) throw error
     set(state => ({
       allStaff: state.allStaff.map(s =>
         s.id === staffId ? { ...s, leave_used: hours } : s
@@ -397,7 +398,8 @@ const useAppStore = create((set, get) => ({
 
   // ── 繰越時間の手動更新 ───────────────────────────────
   updateLeaveCarry: async (staffId, hours) => {
-    await supabase.from('staff').update({ leave_carry: hours }).eq('id', staffId)
+    const { error } = await supabase.from('staff').update({ leave_carry: hours }).eq('id', staffId)
+    if (error) throw error
     set(state => ({
       allStaff: state.allStaff.map(s =>
         s.id === staffId ? { ...s, leave_carry: hours } : s
