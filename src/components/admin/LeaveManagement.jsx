@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import useAppStore from '../../store/useAppStore'
 import { fhLabel, fhS, formatJpDate } from '../../utils/helpers'
+import LeaveGrid, { daysLabel } from '../LeaveGrid'
 
 export default function LeaveManagement() {
   const allLeaveRequests  = useAppStore(s => s.allLeaveRequests)
@@ -174,8 +175,15 @@ export default function LeaveManagement() {
                   <span>使用 <strong style={{ color: 'var(--tx)' }}>{fhS(used)}h</strong></span>
                   <span>残高 <strong style={{ color: remaining < 0 ? '#f47a8a' : 'var(--ac)' }}>
                     {fhS(remaining)}h
-                  </strong></span>
+                  </strong>（{daysLabel(remaining)}）</span>
                 </div>
+                {/* B案マス目 */}
+                <details style={{ paddingLeft: 40, marginTop: 6 }}>
+                  <summary style={{ fontSize: 11, color: 'var(--pu)', cursor: 'pointer' }}>マス目を見る</summary>
+                  <div style={{ marginTop: 6 }}>
+                    <LeaveGrid granted={granted} carry={carry} used={used} compact />
+                  </div>
+                </details>
               </div>
             )
           })

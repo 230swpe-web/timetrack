@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import useAppStore from '../store/useAppStore'
 import { fhS, fhLabel, genTimes, todayStr, formatJpDate } from '../utils/helpers'
+import LeaveGrid, { daysLabel } from './LeaveGrid'
 
 export default function LeaveTab() {
   const currentUser = useAppStore(s => s.currentUser)
@@ -62,14 +63,15 @@ export default function LeaveTab() {
   return (
     <div className="sc">
       <div className="leave-bal card-bloom">
-        <div className="lb-lbl">有給残高</div>
+        <div className="lb-lbl">あなたの有給の残り</div>
         <div className="lb-main">
-          <div className="lb-num">{fhS(remaining)}</div>
-          <div className="lb-unit">時間</div>
-          {bal.carry_over_hours > 0 && (
-            <div className="lb-carry">繰越 {fhS(bal.carry_over_hours)}h 含む</div>
-          )}
+          <div className="lb-days">{daysLabel(remaining)}</div>
         </div>
+        <div className="lb-sub">
+          ＝ {fhS(Math.max(0, remaining))}時間（1日8時間で計算）
+          {bal.carry_over_hours > 0 && <span className="lb-carry">繰越 {fhS(bal.carry_over_hours)}h 含む</span>}
+        </div>
+        <LeaveGrid granted={bal.granted_hours} carry={bal.carry_over_hours} used={bal.used_hours} />
         <div className="lb-row">
           <div className="lb-item">
             <div className="lb-il">繰越</div>
